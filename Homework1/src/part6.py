@@ -1,15 +1,14 @@
-# Part 4: Model a regressor based on the linear SVM.
-# o You may use an available implementation of SVM in Python.
+# Part 6: Model a regressor based on DT (Decision Trees).
+# o You may use an available implementation of DTs in Python.
 # o Report performance using an appropriate k-fold cross validation.
-# o Report the run time performance of your above tests.
+# o Write a function to convert one of your decision trees into a set of rules (i.e., extract
+# the path to each leaf nodes).
 
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
-from sklearn.metrics import confusion_matrix, accuracy_score, mean_absolute_error, roc_curve, auc
-from sklearn.svm import SVC, SVR
-import time
-import os
+from sklearn.tree import DecisionTreeRegressor, export_text
+from sklearn.metrics import mean_absolute_error
 import time
 import matplotlib.pyplot as plt
 
@@ -36,21 +35,21 @@ def load_data(filename):
 
     return bs_data
 
-# Linear SVM Regressor
-def svm_regressor(train_X, train_y, test_X):
-    # Initialize the Support Vector Regressor with a linear kernel
-    svr = SVR(kernel='linear')
+# Decision Tree Regressor
+def decision_tree_regressor(train_X, train_y, test_X):
+    # Initialize the Decision Tree Regressor
+    regressor = DecisionTreeRegressor(random_state=42)
     
     # Train the model on the training data
-    svr.fit(train_X, train_y)
+    regressor.fit(train_X, train_y)
     
     # Make predictions on the test data
-    predictions = svr.predict(test_X)
+    predictions = regressor.predict(test_X)
     
-    return predictions, svr
+    return predictions, regressor
 
-# Evaluate SVM Regressor using k-fold cross-validation
-def evaluate_svm(data, target_column, folds=6):
+# Evaluate Decision Tree Regressor using k-fold cross-validation
+def evaluate_decision_tree(data, target_column, folds=6):
     # Split data into features and target variable
     X = data.drop(columns=[target_column]).values
     y = data[target_column].values
@@ -67,8 +66,8 @@ def evaluate_svm(data, target_column, folds=6):
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
 
-        # Make predictions using the SVM regressor
-        y_pred, model = svm_regressor(X_train, y_train, X_test)
+        # Make predictions using the Decision Tree regressor
+        y_pred, model = decision_tree_regressor(X_train, y_train, X_test)
         
         # Calculate Mean Absolute Error for both training and testing sets
         train_pred = model.predict(X_train)
@@ -91,15 +90,25 @@ def evaluate_svm(data, target_column, folds=6):
 
     return avg_mae, runtime
 
+# Function to extract rules from the Decision Tree
+def extract_rules(model, feature_names):
+    tree_rules = export_text(model, feature_names=feature_names)
+    return tree_rules
+
 if __name__ == "__main__":
     # Load the dataset
-    data = load_data("Homework1/dataset/day.csv")  # Change the path to your dataset location
+    data = load_data("Homework1/dataset/hour.csv")  # Change the path to your dataset location
     target = "cnt"  # The target column to predict
 
-    # Evaluate the SVM regressor and report results for the 6-fold cross-validation
-    mae, time_taken = evaluate_svm(data, target, folds=6)
+    # Evaluate the Decision Tree regressor and report results for the 6-fold cross-validation
+    mae, time_taken = evaluate_decision_tree(data, target, folds=6)
     
     # Print overall results: Average MAE and Total Runtime
     print(f"\nOverall Performance (after 6 folds):")
     print(f"Average Testing MAE: {mae:.4f}")
     print(f"Total Runtime: {time_taken:.4f} seconds")
+    
+    # Extract and print rules for the last fold's trained model
+    final_model = decision_tree_regressor(data.drop(columns=[target]), data[target], data.drop(columns=[target]))[1]
+    rules = extract_rules(final_model, data.drop(columns=[target]).columns)
+    #print("\nDecision Tree Rules:\n", rules)
